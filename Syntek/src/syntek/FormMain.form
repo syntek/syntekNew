@@ -26,7 +26,7 @@
     <AuxValue name="FormSettings_listenerGenerationStyle" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_variablesLocal" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_variablesModifier" type="java.lang.Integer" value="2"/>
-    <AuxValue name="designerSize" type="java.awt.Dimension" value="-84,-19,0,5,115,114,0,18,106,97,118,97,46,97,119,116,46,68,105,109,101,110,115,105,111,110,65,-114,-39,-41,-84,95,68,20,2,0,2,73,0,6,104,101,105,103,104,116,73,0,5,119,105,100,116,104,120,112,0,0,1,-107,0,0,3,-99"/>
+    <AuxValue name="designerSize" type="java.awt.Dimension" value="-84,-19,0,5,115,114,0,18,106,97,118,97,46,97,119,116,46,68,105,109,101,110,115,105,111,110,65,-114,-39,-41,-84,95,68,20,2,0,2,73,0,6,104,101,105,103,104,116,73,0,5,119,105,100,116,104,120,112,0,0,1,-107,0,0,3,-127"/>
   </AuxValues>
 
   <Layout class="org.netbeans.modules.form.compat2.layouts.DesignCardLayout"/>
@@ -46,8 +46,8 @@
                   <Component id="jPanel2" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="unrelated" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
-                      <Component id="pnManageDocument" max="32767" attributes="0"/>
                       <Component id="pnManageFiles" max="32767" attributes="0"/>
+                      <Component id="pnManageDocument" max="32767" attributes="0"/>
                   </Group>
                   <EmptySpace max="-2" attributes="0"/>
               </Group>
@@ -58,10 +58,10 @@
               <Group type="102" alignment="1" attributes="0">
                   <EmptySpace max="32767" attributes="0"/>
                   <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                      <Component id="jPanel2" alignment="0" max="32767" attributes="0"/>
-                      <Group type="102" alignment="1" attributes="0">
+                      <Component id="jPanel2" max="32767" attributes="0"/>
+                      <Group type="102" attributes="0">
                           <Component id="pnManageDocument" min="-2" max="-2" attributes="0"/>
-                          <EmptySpace max="-2" attributes="0"/>
+                          <EmptySpace max="32767" attributes="0"/>
                           <Component id="pnManageFiles" min="-2" max="-2" attributes="0"/>
                       </Group>
                   </Group>
@@ -84,10 +84,10 @@
             <DimensionLayout dim="0">
               <Group type="103" groupAlignment="0" attributes="0">
                   <Group type="102" alignment="1" attributes="0">
-                      <EmptySpace pref="20" max="32767" attributes="0"/>
-                      <Component id="lbDocumentID" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="32767" attributes="0"/>
+                      <Component id="lableDocID" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="lbDocumentIdDetail" min="-2" pref="52" max="-2" attributes="0"/>
+                      <Component id="lbDocumentID" min="-2" pref="52" max="-2" attributes="0"/>
                       <EmptySpace min="-2" pref="189" max="-2" attributes="0"/>
                       <Component id="btnInsertDocument" min="-2" pref="109" max="-2" attributes="0"/>
                       <EmptySpace type="separate" max="-2" attributes="0"/>
@@ -103,11 +103,11 @@
                   <Group type="102" alignment="0" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="lbDocumentID" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="lableDocID" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnInsertDocument" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnEditDocument" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnDeleteDocument" alignment="3" min="-2" max="-2" attributes="0"/>
-                          <Component id="lbDocumentIdDetail" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="lbDocumentID" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
                       <EmptySpace max="32767" attributes="0"/>
                   </Group>
@@ -115,7 +115,7 @@
             </DimensionLayout>
           </Layout>
           <SubComponents>
-            <Component class="javax.swing.JLabel" name="lbDocumentID">
+            <Component class="javax.swing.JLabel" name="lableDocID">
               <Properties>
                 <Property name="text" type="java.lang.String" value="M&#xe3; v&#x103;n b&#x1ea3;n:"/>
               </Properties>
@@ -135,7 +135,7 @@
                 <Property name="text" type="java.lang.String" value="X&#xf3;a v&#x103;n b&#x1ea3;n"/>
               </Properties>
             </Component>
-            <Component class="javax.swing.JLabel" name="lbDocumentIdDetail">
+            <Component class="javax.swing.JLabel" name="lbDocumentID">
               <Properties>
                 <Property name="text" type="java.lang.String" value="1"/>
               </Properties>
@@ -157,7 +157,7 @@
                   <Group type="102" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="jScrollPane2" min="-2" pref="531" max="-2" attributes="0"/>
-                      <EmptySpace max="32767" attributes="0"/>
+                      <EmptySpace pref="24" max="32767" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="103" alignment="1" groupAlignment="0" max="-2" attributes="0">
                               <Component id="jButton2" max="32767" attributes="0"/>
@@ -224,6 +224,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="M&#x1edf; file"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnOpenFileActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JButton" name="jButton2">
               <Properties>
@@ -239,6 +242,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="Th&#xea;m file m&#x1edb;i"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnInsertNewFileActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JButton" name="btnUpdateFile">
               <Properties>
@@ -267,8 +273,11 @@
                   <Group type="102" attributes="0">
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="jScrollPane3" max="32767" attributes="0"/>
-                          <Component id="btnExport" alignment="0" pref="151" max="32767" attributes="0"/>
+                          <Component id="btnExport" max="32767" attributes="0"/>
+                          <Group type="102" attributes="0">
+                              <Component id="jScrollPane3" min="-2" pref="133" max="-2" attributes="0"/>
+                              <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
+                          </Group>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                   </Group>
@@ -296,15 +305,12 @@
                 <Component class="javax.swing.JList" name="txtDocumentList">
                   <Properties>
                     <Property name="model" type="javax.swing.ListModel" editor="org.netbeans.modules.form.editors2.ListModelEditor">
-                      <StringArray count="5">
-                        <StringItem index="0" value="V&#x103;n b&#x1ea3;n 1"/>
-                        <StringItem index="1" value="V&#x103;n b&#x1ea3;n 2"/>
-                        <StringItem index="2" value="V&#x103;n b&#x1ea3;n 3"/>
-                        <StringItem index="3" value="V&#x103;n b&#x1ea3;n 4"/>
-                        <StringItem index="4" value="V&#x103;n b&#x1ea3;n 5"/>
-                      </StringArray>
+                      <StringArray count="0"/>
                     </Property>
                   </Properties>
+                  <Events>
+                    <EventHandler event="valueChanged" listener="javax.swing.event.ListSelectionListener" parameters="javax.swing.event.ListSelectionEvent" handler="txtDocumentListValueChanged"/>
+                  </Events>
                 </Component>
               </SubComponents>
             </Container>

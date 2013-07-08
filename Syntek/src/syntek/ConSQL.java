@@ -15,18 +15,27 @@ import java.util.logging.Logger;
  * @author ABC
  */
 public class ConSQL {
-        public static Connection con = null;
-    public static Connection getConnection() {
-        
+
+    public static String SERVER_NAME = null;
+    public static String PORT = null;
+    public static String DATABASE_NAME = null;
+    public static String USER_NAME = null;
+    public static String PASSWORD = null;
+    public static Connection CON = null;
+
+    public ConSQL(String server_name, String port, String database_name, String user_name, String password) {
+        this.SERVER_NAME = server_name;
+        this.PORT = port;
+        this.DATABASE_NAME = database_name;
+        this.USER_NAME = user_name;
+        this.PASSWORD = password;
+
         try {
-            String url = "jdbc:sqlserver://localhost:1433;databaseName=syntek";
-            String user = "sa";
-            String pass = "123456";
+            String url = String.format("jdbc:sqlserver://%s:%s;databaseName=%s", SERVER_NAME, PORT, DATABASE_NAME);
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            con = DriverManager.getConnection(url, user, pass);
+            CON = DriverManager.getConnection(url, USER_NAME, PASSWORD);
         } catch (Exception ex) {
             Logger.getLogger(ConSQL.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return con;
     }
 }

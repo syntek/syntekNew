@@ -4,30 +4,18 @@
  */
 package syntek;
 
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-
 /**
  *
  * @author ABC
  */
-public class FormInsertDocument extends javax.swing.JFrame {
+public class FormInsertDocument extends javax.swing.JDialog {
 
     /**
-     * Creates new form formInsertDocument
+     * Creates new form NewJDialog
      */
-    public FormInsertDocument() {
+    public FormInsertDocument(java.awt.Frame parent, boolean modal) {
+        super(parent, modal);
         initComponents();
-        Vector vt = new Vector();
-        vt.add("ID");
-        vt.add("DocumentID");
-        vt.add("FileIndex");
-        vt.add("URL");
-        vt.add("PageCount");
-        tableFileDetail.setModel(FormMain.getDataFromTable("DocumentFile", vt));
     }
 
     /**
@@ -48,7 +36,7 @@ public class FormInsertDocument extends javax.swing.JFrame {
         btnInsertDocument = new javax.swing.JButton();
         btnDeleteFile = new javax.swing.JButton();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         getContentPane().setLayout(new java.awt.CardLayout());
 
         lbDocumentName.setText("Tên văn bản:");
@@ -105,7 +93,7 @@ public class FormInsertDocument extends javax.swing.JFrame {
                     .addComponent(btnDeleteFile))
                 .addGap(30, 30, 30)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 260, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         getContentPane().add(jPanel1, "card2");
@@ -140,21 +128,17 @@ public class FormInsertDocument extends javax.swing.JFrame {
         }
         //</editor-fold>
 
-        /* Create and display the form */
+        /* Create and display the dialog */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                    new FormInsertDocument().setVisible(true);
-                } catch (ClassNotFoundException ex) {
-                    Logger.getLogger(FormInsertDocument.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (InstantiationException ex) {
-                    Logger.getLogger(FormInsertDocument.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (IllegalAccessException ex) {
-                    Logger.getLogger(FormInsertDocument.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (UnsupportedLookAndFeelException ex) {
-                    Logger.getLogger(FormInsertDocument.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                FormInsertDocument dialog = new FormInsertDocument(new javax.swing.JFrame(), true);
+                dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+                    @Override
+                    public void windowClosing(java.awt.event.WindowEvent e) {
+                        System.exit(0);
+                    }
+                });
+                dialog.setVisible(true);
             }
         });
     }
