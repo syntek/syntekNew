@@ -171,6 +171,7 @@ public class DialogInsertNewFile extends javax.swing.JDialog {
                 int e = ps.executeUpdate();
                 if (e > 0) {
                     JOptionPane.showMessageDialog(null, "Thêm thành công");
+                    this.dispose();
                 }
 
             } catch (SQLException ex) {
