@@ -4,16 +4,36 @@
  */
 package syntek;
 
+import com.lowagie.text.pdf.ArabicLigaturizer;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.table.DefaultTableModel;
+import org.docx4j.convert.out.flatOpcXml.FlatOpcXmlCreator;
+import org.docx4j.openpackaging.exceptions.Docx4JException;
+import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
+import org.docx4j.xmlPackage.XmlData;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 /**
  *
@@ -26,16 +46,27 @@ public class FormMain extends javax.swing.JFrame {
      */
     public FormMain() {
         initComponents();
-        Vector vt = new Vector();
-        vt.add("ID");
-        vt.add("DocumentID");
-        vt.add("FileIndex");
-        vt.add("URL");
-        vt.add("PageCount");
-        tableFileDetail.setModel(getDataFromTable("DocumentFile", vt));
+        ConSQL conSQL = new ConSQL("localhost", "1433", "syntek", "sa", "1234$");
+        loadListDocument();
+//        Vector vt = new Vector();
+//        vt.add("");
+//        vt.add("Mã file");
+//        vt.add("Mã văn bản");
+//        vt.add("Số thứ tự");
+//        vt.add("Đường dẫn");
+//        vt.add("Số trang");
+//        tableFileDetail.setModel(getDataFromTable("DocumentFile", vt));
+
+        btnConvertDocxToPDF.setEnabled(false);
+        btnDeleteFile.setEnabled(false);
+        btnInsertNewFile.setEnabled(false);
+        btnMergeFile.setEnabled(false);
+        btnOpenFile.setEnabled(false);
+        btnUpdateFile.setEnabled(false);
     }
 
     public static DefaultTableModel getDataFromTable(String tableName, Vector tableTitle) {
+
         tableTitle.add(0, "");
         DefaultTableModel model = new DefaultTableModel() {
             @Override
@@ -61,7 +92,7 @@ public class FormMain extends javax.swing.JFrame {
 
         try {
 
-            Statement stm = ConSQL.getConnection().createStatement();
+            Statement stm = ConSQL.CON.createStatement();
             ResultSet rs = stm.executeQuery("select * from " + tableName);
             ResultSetMetaData rsmt = rs.getMetaData();
             while (rs.next()) {
@@ -79,6 +110,138 @@ public class FormMain extends javax.swing.JFrame {
         return model;
     }
 
+    public ArrayList<String> getPathChooseFromTable(JTable table) {
+        ArrayList<String> list = new ArrayList();
+        int rowCount = table.getRowCount();
+        for (int i = 0; i < rowCount; i++) {
+            boolean check = (boolean) table.getValueAt(i, 0);
+            if (check) {
+                list.add(table.getValueAt(i, 3).toString());
+                //System.out.println(table.getValueAt(i, 3).toString());
+            }
+        }
+        return list;
+    }
+
+    public void loadListDocument() {
+        try {
+            String sql = "SELECT title FROM Document";
+            CallableStatement cs = ConSQL.CON.prepareCall(sql);
+            ResultSet rs = cs.executeQuery();
+            DefaultListModel defaultListModel = new DefaultListModel();
+            while (rs.next()) {
+                defaultListModel.addElement(rs.getString(1));
+            }
+            txtDocumentList.setModel(defaultListModel);
+            btnEditDocument.setEnabled(false);
+            btnDeleteDocument.setEnabled(false);
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public String getDocumentIDbyName(String title) {
+        String id = "";
+        try {
+            String sql = "SELECT id from Document WHERE Title = ?";
+            PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
+            ps.setString(1, title);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                id = rs.getString("id");
+            }
+        } catch (SQLException ex) {
+            //Logger.getLogger(formMain.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //System.out.println(id);
+        return id;
+    }
+
+    public void updateDataTable(String id) {
+        try {
+            String sql = "SELECT ID, FileIndex, URL, PageCount FROM DocumentFile WHERE DocumentID =? order by FileIndex";
+            PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
+            ps.setString(1, id);
+            ResultSet rs = ps.executeQuery();
+            DefaultTableModel defaultTableModel = new DefaultTableModel() {
+                @Override
+                public boolean isCellEditable(int x, int y) {
+                    if (y > 0) {
+                        return false;
+                    } else {
+                        return true;
+                    }
+                }
+
+                @Override
+                public Class getColumnClass(int col) {
+                    switch (col) {
+                        case 0:
+                            return Boolean.class;
+                        default:
+                            return String.class;
+                    }
+                }
+            };
+
+            Vector<String> title = new Vector<>();
+            title.add("");
+            title.add("Mã file");
+            title.add("Số thứ tự");
+            title.add("Đường dẫn");
+            title.add("Số trang");
+            defaultTableModel.setColumnIdentifiers(title);
+
+            while (rs.next()) {
+                Vector data = new Vector();
+                data.add(false);
+                data.add(rs.getString("ID"));
+                data.add(rs.getString("FileIndex"));
+                data.add(rs.getString("URL"));
+                data.add(rs.getString("PageCount"));
+
+                defaultTableModel.addRow(data);
+            }
+            tableFileDetail.setModel(defaultTableModel);
+        } catch (SQLException ex) {
+            //Logger.getLogger(formMain.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
+        }
+    }
+
+    public int getPagesNumber(String pathFile) {
+        int pageNumber = 0;
+        try {
+            WordprocessingMLPackage mLPackage = WordprocessingMLPackage.load(new File(pathFile));
+            MainDocumentPart mainDocumentPart = mLPackage.getMainDocumentPart();
+            FlatOpcXmlCreator worker = new FlatOpcXmlCreator(mLPackage);
+            org.docx4j.xmlPackage.Package pkg = worker.get();
+            List<org.docx4j.xmlPackage.Part> parts = pkg.getPart();
+
+            System.out.println("part: " + parts.size());
+            for (int i = 0; i < parts.size(); i++) {
+                if (parts.get(i).getName().equalsIgnoreCase("/docProps/app.xml")) {
+                    XmlData xmlData = parts.get(i).getXmlData();
+                    Element any = xmlData.getAny();
+                    NodeList list = any.getChildNodes();
+                    System.out.println("List: " + list.getLength());
+                    for (int j = 0; j < list.getLength(); j++) {
+                        org.w3c.dom.Node node = list.item(j);
+                        if (node.getNodeName().equalsIgnoreCase("properties:Pages")) {
+                            pageNumber = Integer.parseInt(node.getFirstChild().getNodeValue());
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        } catch (Docx4JException ex) {
+            JOptionPane.showMessageDialog(null, "Lỗi lấy số trang");
+            //Logger.getLogger(Fake.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return pageNumber;
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -87,17 +250,17 @@ public class FormMain extends javax.swing.JFrame {
         jScrollBar1 = new javax.swing.JScrollBar();
         jPanel1 = new javax.swing.JPanel();
         pnManageDocument = new javax.swing.JPanel();
-        lbDocumentID = new javax.swing.JLabel();
+        lableDocID = new javax.swing.JLabel();
         btnInsertDocument = new javax.swing.JButton();
         btnEditDocument = new javax.swing.JButton();
         btnDeleteDocument = new javax.swing.JButton();
-        lbDocumentIdDetail = new javax.swing.JLabel();
+        lbDocumentID = new javax.swing.JLabel();
         pnManageFiles = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         tableFileDetail = new javax.swing.JTable();
         btnOpenFile = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
-        jButton3 = new javax.swing.JButton();
+        btnMergeFile = new javax.swing.JButton();
+        btnConvertDocxToPDF = new javax.swing.JButton();
         btnInsertNewFile = new javax.swing.JButton();
         btnUpdateFile = new javax.swing.JButton();
         btnDeleteFile = new javax.swing.JButton();
@@ -113,29 +276,44 @@ public class FormMain extends javax.swing.JFrame {
 
         pnManageDocument.setBorder(javax.swing.BorderFactory.createTitledBorder("Quản lý văn bản"));
 
-        lbDocumentID.setText("Mã văn bản:");
+        lableDocID.setText("Mã văn bản:");
 
         btnInsertDocument.setText("Thêm văn bản");
+        btnInsertDocument.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnInsertDocumentActionPerformed(evt);
+            }
+        });
 
-        btnEditDocument.setText("Sủa văn bản");
+        btnEditDocument.setText("Sửa tên văn bản");
+        btnEditDocument.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnEditDocumentActionPerformed(evt);
+            }
+        });
 
         btnDeleteDocument.setText("Xóa văn bản");
+        btnDeleteDocument.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteDocumentActionPerformed(evt);
+            }
+        });
 
-        lbDocumentIdDetail.setText("1");
+        lbDocumentID.setText("1");
 
         javax.swing.GroupLayout pnManageDocumentLayout = new javax.swing.GroupLayout(pnManageDocument);
         pnManageDocument.setLayout(pnManageDocumentLayout);
         pnManageDocumentLayout.setHorizontalGroup(
             pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnManageDocumentLayout.createSequentialGroup()
-                .addContainerGap(20, Short.MAX_VALUE)
-                .addComponent(lbDocumentID)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(lableDocID)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(lbDocumentIdDetail, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(189, 189, 189)
+                .addComponent(lbDocumentID, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(171, 171, 171)
                 .addComponent(btnInsertDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(btnEditDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnEditDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 127, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(btnDeleteDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -145,11 +323,11 @@ public class FormMain extends javax.swing.JFrame {
             .addGroup(pnManageDocumentLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lbDocumentID)
+                    .addComponent(lableDocID)
                     .addComponent(btnInsertDocument)
                     .addComponent(btnEditDocument)
                     .addComponent(btnDeleteDocument)
-                    .addComponent(lbDocumentIdDetail))
+                    .addComponent(lbDocumentID))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -157,28 +335,65 @@ public class FormMain extends javax.swing.JFrame {
 
         tableFileDetail.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
+
             },
             new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
+                "", "Mã", "Số thứ tự", "Đường dẫn", "Số trang"
             }
-        ));
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        tableFileDetail.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tableFileDetailMouseClicked(evt);
+            }
+        });
         jScrollPane2.setViewportView(tableFileDetail);
+        tableFileDetail.getColumnModel().getColumn(0).setResizable(false);
+        tableFileDetail.getColumnModel().getColumn(3).setResizable(false);
 
         btnOpenFile.setText("Mở file");
+        btnOpenFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnOpenFileActionPerformed(evt);
+            }
+        });
 
-        jButton2.setText("Nối file");
+        btnMergeFile.setText("Nối file");
+        btnMergeFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnMergeFileActionPerformed(evt);
+            }
+        });
 
-        jButton3.setText("Chuyển sang pdf");
+        btnConvertDocxToPDF.setText("Chuyển sang pdf");
 
         btnInsertNewFile.setText("Thêm file mới");
+        btnInsertNewFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnInsertNewFileActionPerformed(evt);
+            }
+        });
 
         btnUpdateFile.setText("Cập nhật File");
+        btnUpdateFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnUpdateFileActionPerformed(evt);
+            }
+        });
 
         btnDeleteFile.setText("Xóa File");
+        btnDeleteFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnDeleteFileActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout pnManageFilesLayout = new javax.swing.GroupLayout(pnManageFiles);
         pnManageFiles.setLayout(pnManageFilesLayout);
@@ -190,12 +405,12 @@ public class FormMain extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnMergeFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(btnOpenFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(btnInsertNewFile, javax.swing.GroupLayout.DEFAULT_SIZE, 115, Short.MAX_VALUE)
                         .addComponent(btnUpdateFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(btnDeleteFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(jButton3, javax.swing.GroupLayout.Alignment.TRAILING))
+                    .addComponent(btnConvertDocxToPDF, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addContainerGap())
         );
         pnManageFilesLayout.setVerticalGroup(
@@ -213,19 +428,24 @@ public class FormMain extends javax.swing.JFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnDeleteFile)
                         .addGap(36, 36, 36)
-                        .addComponent(jButton2)
+                        .addComponent(btnMergeFile)
                         .addGap(18, 18, 18)
-                        .addComponent(jButton3)
+                        .addComponent(btnConvertDocxToPDF)
                         .addGap(35, 35, 35)))
                 .addContainerGap())
         );
 
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Danh sách văn bản"));
 
-        txtDocumentList.setModel(new javax.swing.AbstractListModel() {
-            String[] strings = { "Văn bản 1", "Văn bản 2", "Văn bản 3", "Văn bản 4", "Văn bản 5" };
-            public int getSize() { return strings.length; }
-            public Object getElementAt(int i) { return strings[i]; }
+        txtDocumentList.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                txtDocumentListMouseClicked(evt);
+            }
+        });
+        txtDocumentList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
+            public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
+                txtDocumentListValueChanged(evt);
+            }
         });
         jScrollPane3.setViewportView(txtDocumentList);
 
@@ -238,8 +458,10 @@ public class FormMain extends javax.swing.JFrame {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane3)
-                    .addComponent(btnExport, javax.swing.GroupLayout.DEFAULT_SIZE, 151, Short.MAX_VALUE))
+                    .addComponent(btnExport, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 133, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -260,8 +482,8 @@ public class FormMain extends javax.swing.JFrame {
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(pnManageDocument, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(pnManageFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(pnManageFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(pnManageDocument, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
@@ -270,9 +492,9 @@ public class FormMain extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                    .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(pnManageDocument, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(pnManageFiles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
         );
@@ -281,6 +503,243 @@ public class FormMain extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void btnOpenFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnOpenFileActionPerformed
+        // TODO add your handling code here:
+        ArrayList<String> list = getPathChooseFromTable(tableFileDetail);
+        for (int i = 0; i < list.size(); i++) {
+            System.out.println(list.get(i).toString());
+            try {
+                //Process p = Runtime.getRuntime().exec("cmd /c " + list.get(i).toString());
+                Process p = Runtime.getRuntime().exec("cmd /c " + "\"" + list.get(i).toString() + "\"");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(null, "Không tìm thấy file: " + list.get(i).toString(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+                //Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_btnOpenFileActionPerformed
+
+    private void btnInsertNewFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInsertNewFileActionPerformed
+
+        DialogInsertNewFile dialogInsertNewFile = new DialogInsertNewFile(this, true, lbDocumentID.getText());
+        dialogInsertNewFile.setVisible(true);
+        String id = getDocumentIDbyName(txtDocumentList.getSelectedValue().toString());
+        updateDataTable(id);
+
+    }//GEN-LAST:event_btnInsertNewFileActionPerformed
+
+    private void txtDocumentListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_txtDocumentListValueChanged
+        if (txtDocumentList.getSelectedIndex() > -1) {
+            String id = getDocumentIDbyName(txtDocumentList.getSelectedValue().toString());
+            updateDataTable(id);
+            lbDocumentID.setText(id);
+            btnEditDocument.setEnabled(true);
+            btnDeleteDocument.setEnabled(true);
+        }
+    }//GEN-LAST:event_txtDocumentListValueChanged
+
+    private void txtDocumentListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_txtDocumentListMouseClicked
+        if (txtDocumentList.getSelectedIndex() >= 0) {
+            btnDeleteFile.setEnabled(false);
+            btnInsertNewFile.setEnabled(true);
+            btnUpdateFile.setEnabled(false);
+            btnMergeFile.setEnabled(false);
+            btnConvertDocxToPDF.setEnabled(false);
+            btnOpenFile.setEnabled(false);
+            if (_getRowSelectedCount(tableFileDetail) > 0) {
+                btnOpenFile.setEnabled(true);
+                btnConvertDocxToPDF.setEnabled(true);
+                btnUpdateFile.setEnabled(true);
+                btnDeleteFile.setEnabled(true);
+            }
+        }
+    }//GEN-LAST:event_txtDocumentListMouseClicked
+
+    private void btnInsertDocumentActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInsertDocumentActionPerformed
+
+        String temp = JOptionPane.showInputDialog(null, "Mời bạn nhập tên văn bản (Tên văn bản phải là duy nhất): ", "Nhập", JOptionPane.PLAIN_MESSAGE);
+        System.out.println(temp);
+        if (null != temp) {
+            String sql = "SELECT id FROM Document WHERE Title=?";
+            try {
+                PreparedStatement preparedStatement = ConSQL.CON.prepareStatement(sql);
+                preparedStatement.setString(1, temp);
+                ResultSet rs = preparedStatement.executeQuery();
+                if (rs.next()) {
+                    JOptionPane.showMessageDialog(null, "Tên văn bản đã tồn tại! Xin hãy chọn tên khác", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    preparedStatement = ConSQL.CON.prepareStatement("INSERT INTO Document VALUES(?)");
+                    preparedStatement.setString(1, temp);
+                    if (preparedStatement.executeUpdate() > 0) {
+                        JOptionPane.showMessageDialog(null, "Thêm mới văn bản thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                        loadListDocument();
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Thêm mới văn bản không thành công", "Thông báo", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        }
+    }//GEN-LAST:event_btnInsertDocumentActionPerformed
+
+    private int _getRowSelectedCount(JTable table) {
+        int count = 0;
+        for (int i = 0; i < table.getRowCount(); i++) {
+            if (table.getValueAt(i, 0).toString().equals("true")) {
+                count++;
+            }
+        }
+        return count;
+    }
+    private void tableFileDetailMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tableFileDetailMouseClicked
+        int a = _getRowSelectedCount(tableFileDetail);
+        if (a > 0) {
+            btnOpenFile.setEnabled(true);
+            btnConvertDocxToPDF.setEnabled(true);
+            btnUpdateFile.setEnabled(true);
+            btnDeleteFile.setEnabled(true);
+        }
+        else
+        {
+            btnOpenFile.setEnabled(false);
+            btnConvertDocxToPDF.setEnabled(false);
+            btnUpdateFile.setEnabled(false);
+            btnDeleteFile.setEnabled(false);
+        }
+        //System.out.println(tableFileDetail.getValueAt(0, 0));
+        if (a > 1) {
+            btnMergeFile.setEnabled(true);
+        } else {
+            btnMergeFile.setEnabled(false);
+        }
+    }//GEN-LAST:event_tableFileDetailMouseClicked
+
+    private void btnUpdateFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateFileActionPerformed
+        // TODO add your handling code here:
+        boolean check = true;
+        ArrayList<String> list = getPathChooseFromTable(tableFileDetail);
+        int DocumentID = Integer.parseInt(lbDocumentID.getText());
+        for (int i = 0; i < list.size(); i++) {
+            try {
+                String url = list.get(i);
+                int pageCount = getPagesNumber(url);
+                String sql = "UPDATE DocumentFile SET pageCount =? WHERE DocumentID =? and URL =?";
+                PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
+                ps.setInt(1, pageCount);
+                ps.setInt(2, DocumentID);
+                ps.setString(3, url);
+
+                ps.executeUpdate();
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "Lỗi cập nhật file: " + list.get(i));
+                check = false;
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        if (check) {
+            JOptionPane.showMessageDialog(null, "Cập nhật thành công");
+            updateDataTable(String.valueOf(DocumentID));
+        }
+    }//GEN-LAST:event_btnUpdateFileActionPerformed
+
+    private void btnDeleteFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteFileActionPerformed
+        // TODO add your handling code here:
+        boolean check = true;
+        ArrayList<String> list = getPathChooseFromTable(tableFileDetail);
+        int DocumentID = Integer.parseInt(lbDocumentID.getText());
+        for (int i = 0; i < list.size(); i++) {
+            try {
+                String url = list.get(i);
+                String sql = "DELETE DocumentFile WHERE DocumentID =? and URL =?";
+                PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
+                ps.setInt(1, DocumentID);
+                ps.setString(2, url);
+                ps.executeUpdate();
+            } catch (SQLException ex) {
+                check = false;
+                JOptionPane.showMessageDialog(null, "Lỗi xóa file");
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        if (check) {
+            JOptionPane.showMessageDialog(null, "Xóa thành công");
+            updateDataTable(lbDocumentID.getText());
+        }
+    }//GEN-LAST:event_btnDeleteFileActionPerformed
+
+    private void btnEditDocumentActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditDocumentActionPerformed
+        String temp = null;
+        try {
+            temp = JOptionPane.showInputDialog(null, "Mời bạn nhập tên văn bản mới(Tên văn bản phải là duy nhất): ", "Nhập", JOptionPane.PLAIN_MESSAGE, null, null, txtDocumentList.getSelectedValue().toString()).toString();
+        } catch (NullPointerException ex) {
+        }
+        if (null != temp && temp.length() > 0) {
+            String sql = "SELECT id FROM Document WHERE Title=?";
+            try {
+                PreparedStatement preparedStatement = ConSQL.CON.prepareStatement(sql);
+                preparedStatement.setString(1, temp);
+                ResultSet rs = preparedStatement.executeQuery();
+                if (rs.next()) {
+                    JOptionPane.showMessageDialog(null, "Tên văn bản đã tồn tại! Xin hãy chọn tên khác", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    preparedStatement = ConSQL.CON.prepareStatement("update Document set Title=? where ID=?");
+                    preparedStatement.setString(1, temp);
+                    preparedStatement.setString(2, lbDocumentID.getText());
+                    if (preparedStatement.executeUpdate() > 0) {
+                        JOptionPane.showMessageDialog(null, "Sửa tên văn bản thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                        loadListDocument();
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Xảy ra lỗi khi sửa", "Thông báo", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_btnEditDocumentActionPerformed
+
+    private void btnDeleteDocumentActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteDocumentActionPerformed
+        if (JOptionPane.showConfirmDialog(null, "Bạn thực sự muốn xóa văn bản này?", "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+            try {
+                PreparedStatement pstm = ConSQL.CON.prepareStatement("DELETE Document WHERE ID=?");
+                pstm.setString(1, lbDocumentID.getText());
+                if (pstm.executeUpdate() > 0) {
+                    JOptionPane.showMessageDialog(null, "Xóa thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+                    loadListDocument();
+                    updateDataTable(null);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Xóa thất bại", "Thông báo", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }//GEN-LAST:event_btnDeleteDocumentActionPerformed
+
+    private void btnMergeFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnMergeFileActionPerformed
+        // TODO add your handling code here:
+        ArrayList<String> listPath = getPathChooseFromTable(tableFileDetail);
+        List<InputStream> listInputStream = new ArrayList<>();
+
+        for (int i = 0; i < listPath.size(); i++) {
+            try {
+                InputStream is = new FileInputStream(new File(listPath.get(i).toString()));
+                listInputStream.add(is);
+            } catch (FileNotFoundException ex) {
+                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        try {
+            MergeDocx.mergeDocx(listInputStream, "D:/testssssssssss1.docx");
+        } catch (Docx4JException ex) {
+            Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_btnMergeFileActionPerformed
 
     /**
      * @param args the command line arguments
@@ -328,24 +787,24 @@ public class FormMain extends javax.swing.JFrame {
         });
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnConvertDocxToPDF;
     private javax.swing.JButton btnDeleteDocument;
     private javax.swing.JButton btnDeleteFile;
     private javax.swing.JButton btnEditDocument;
     private javax.swing.JButton btnExport;
     private javax.swing.JButton btnInsertDocument;
     private javax.swing.JButton btnInsertNewFile;
+    private javax.swing.JButton btnMergeFile;
     private javax.swing.JButton btnOpenFile;
     private javax.swing.JButton btnUpdateFile;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
     private javax.swing.JButton jButton4;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollBar jScrollBar1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JLabel lableDocID;
     private javax.swing.JLabel lbDocumentID;
-    private javax.swing.JLabel lbDocumentIdDetail;
     private javax.swing.JPanel pnManageDocument;
     private javax.swing.JPanel pnManageFiles;
     private javax.swing.JTable tableFileDetail;
