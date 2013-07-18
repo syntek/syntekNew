@@ -4,7 +4,10 @@
  */
 package syntek;
 
-import com.lowagie.text.pdf.ArabicLigaturizer;
+import java.awt.Dimension;
+import java.awt.Toolkit;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -22,11 +25,17 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import org.docx4j.convert.out.flatOpcXml.FlatOpcXmlCreator;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
@@ -44,25 +53,64 @@ public class FormMain extends javax.swing.JFrame {
     /**
      * Creates new form formMain
      */
+    public static int documentID = -1;
+
     public FormMain() {
         initComponents();
+        myInit();
+    }
+
+    private void setCenterPosition() {
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
+    }
+
+    private void myInit() {
         ConSQL conSQL = new ConSQL("localhost", "1433", "syntek", "sa", "1234$");
         loadListDocument();
-//        Vector vt = new Vector();
-//        vt.add("");
-//        vt.add("Mã file");
-//        vt.add("Mã văn bản");
-//        vt.add("Số thứ tự");
-//        vt.add("Đường dẫn");
-//        vt.add("Số trang");
-//        tableFileDetail.setModel(getDataFromTable("DocumentFile", vt));
-
         btnConvertDocxToPDF.setEnabled(false);
         btnDeleteFile.setEnabled(false);
         btnInsertNewFile.setEnabled(false);
         btnMergeFile.setEnabled(false);
         btnOpenFile.setEnabled(false);
         btnUpdateFile.setEnabled(false);
+        btnMoveDown.setEnabled(false);
+        btnMoveUp.setEnabled(false);
+
+        setCenterPosition();
+        
+        this.addComponentListener(new ComponentListener() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                setTableOption(tableFileDetail);
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e) {
+            }
+
+            @Override
+            public void componentShown(ComponentEvent e) {
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+            }
+        });
+    }
+
+    private void setTableOption(JTable table) {
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        TableColumnModel columnModel = table.getColumnModel();
+        columnModel.getColumn(0).setPreferredWidth(30);
+        columnModel.getColumn(1).setPreferredWidth(60);
+        columnModel.getColumn(2).setPreferredWidth(table.getBounds().width - 30 - 120);
+        columnModel.getColumn(3).setPreferredWidth(60);
+        ((DefaultTableCellRenderer) table.getTableHeader().getDefaultRenderer())
+                .setHorizontalAlignment(JLabel.CENTER);
+        TableColumn tc = columnModel.getColumn(0);
+        TableCellRenderer r = new HeaderRenderer(table.getTableHeader(), 0);
+        table.getColumnModel().getColumn(0).setHeaderRenderer(r);
     }
 
     public static DefaultTableModel getDataFromTable(String tableName, Vector tableTitle) {
@@ -116,7 +164,7 @@ public class FormMain extends javax.swing.JFrame {
         for (int i = 0; i < rowCount; i++) {
             boolean check = (boolean) table.getValueAt(i, 0);
             if (check) {
-                list.add(table.getValueAt(i, 3).toString());
+                list.add(table.getValueAt(i, 2).toString());
                 //System.out.println(table.getValueAt(i, 3).toString());
             }
         }
@@ -159,7 +207,7 @@ public class FormMain extends javax.swing.JFrame {
 
     public void updateDataTable(String id) {
         try {
-            String sql = "SELECT ID, FileIndex, URL, PageCount FROM DocumentFile WHERE DocumentID =? order by FileIndex";
+            String sql = "SELECT ROW_NUMBER()Over (Order by fileIndex) as STT,URL, PageCount FROM DocumentFile WHERE DocumentID =? order by FileIndex";
             PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
             ps.setString(1, id);
             ResultSet rs = ps.executeQuery();
@@ -178,6 +226,10 @@ public class FormMain extends javax.swing.JFrame {
                     switch (col) {
                         case 0:
                             return Boolean.class;
+                        case 1:
+                            return Integer.class;
+                        case 3:
+                            return Integer.class;
                         default:
                             return String.class;
                     }
@@ -186,8 +238,7 @@ public class FormMain extends javax.swing.JFrame {
 
             Vector<String> title = new Vector<>();
             title.add("");
-            title.add("Mã file");
-            title.add("Số thứ tự");
+            title.add("STT");
             title.add("Đường dẫn");
             title.add("Số trang");
             defaultTableModel.setColumnIdentifiers(title);
@@ -195,14 +246,14 @@ public class FormMain extends javax.swing.JFrame {
             while (rs.next()) {
                 Vector data = new Vector();
                 data.add(false);
-                data.add(rs.getString("ID"));
-                data.add(rs.getString("FileIndex"));
+                data.add(rs.getString("STT"));
                 data.add(rs.getString("URL"));
                 data.add(rs.getString("PageCount"));
 
                 defaultTableModel.addRow(data);
             }
             tableFileDetail.setModel(defaultTableModel);
+            setTableOption(tableFileDetail);
         } catch (SQLException ex) {
             //Logger.getLogger(formMain.class.getName()).log(Level.SEVERE, null, ex);
             ex.printStackTrace();
@@ -264,6 +315,8 @@ public class FormMain extends javax.swing.JFrame {
         btnInsertNewFile = new javax.swing.JButton();
         btnUpdateFile = new javax.swing.JButton();
         btnDeleteFile = new javax.swing.JButton();
+        btnMoveUp = new javax.swing.JButton();
+        btnMoveDown = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         txtDocumentList = new javax.swing.JList();
@@ -272,11 +325,17 @@ public class FormMain extends javax.swing.JFrame {
         jButton4.setText("jButton4");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setMinimumSize(new java.awt.Dimension(897, 440));
+        addWindowStateListener(new java.awt.event.WindowStateListener() {
+            public void windowStateChanged(java.awt.event.WindowEvent evt) {
+                formWindowStateChanged(evt);
+            }
+        });
         getContentPane().setLayout(new java.awt.CardLayout());
 
         pnManageDocument.setBorder(javax.swing.BorderFactory.createTitledBorder("Quản lý văn bản"));
 
-        lableDocID.setText("Mã văn bản:");
+        lableDocID.setText("Văn bản: ");
 
         btnInsertDocument.setText("Thêm văn bản");
         btnInsertDocument.addActionListener(new java.awt.event.ActionListener() {
@@ -299,22 +358,20 @@ public class FormMain extends javax.swing.JFrame {
             }
         });
 
-        lbDocumentID.setText("1");
-
         javax.swing.GroupLayout pnManageDocumentLayout = new javax.swing.GroupLayout(pnManageDocument);
         pnManageDocument.setLayout(pnManageDocumentLayout);
         pnManageDocumentLayout.setHorizontalGroup(
             pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnManageDocumentLayout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap()
                 .addComponent(lableDocID)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(lbDocumentID, javax.swing.GroupLayout.PREFERRED_SIZE, 52, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(171, 171, 171)
+                .addGap(18, 18, 18)
+                .addComponent(lbDocumentID, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addComponent(btnInsertDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnEditDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 127, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnDeleteDocument, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -322,12 +379,13 @@ public class FormMain extends javax.swing.JFrame {
             pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnManageDocumentLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lableDocID)
-                    .addComponent(btnInsertDocument)
-                    .addComponent(btnEditDocument)
-                    .addComponent(btnDeleteDocument)
-                    .addComponent(lbDocumentID))
+                .addGroup(pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(pnManageDocumentLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(lableDocID)
+                        .addComponent(btnInsertDocument, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnEditDocument, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(btnDeleteDocument, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(lbDocumentID, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -338,11 +396,11 @@ public class FormMain extends javax.swing.JFrame {
 
             },
             new String [] {
-                "", "Mã", "Số thứ tự", "Đường dẫn", "Số trang"
+                "", "Số thứ tự", "Đường dẫn", "Số trang"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false
+                false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -355,8 +413,6 @@ public class FormMain extends javax.swing.JFrame {
             }
         });
         jScrollPane2.setViewportView(tableFileDetail);
-        tableFileDetail.getColumnModel().getColumn(0).setResizable(false);
-        tableFileDetail.getColumnModel().getColumn(3).setResizable(false);
 
         btnOpenFile.setText("Mở file");
         btnOpenFile.addActionListener(new java.awt.event.ActionListener() {
@@ -395,43 +451,56 @@ public class FormMain extends javax.swing.JFrame {
             }
         });
 
+        btnMoveUp.setText("Chuyển lên");
+
+        btnMoveDown.setText("Chuyển xuống");
+
         javax.swing.GroupLayout pnManageFilesLayout = new javax.swing.GroupLayout(pnManageFiles);
         pnManageFiles.setLayout(pnManageFilesLayout);
         pnManageFilesLayout.setHorizontalGroup(
             pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnManageFilesLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 531, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(btnMergeFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btnOpenFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btnInsertNewFile, javax.swing.GroupLayout.DEFAULT_SIZE, 115, Short.MAX_VALUE)
-                        .addComponent(btnUpdateFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(btnDeleteFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(btnConvertDocxToPDF, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 537, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
+                .addGroup(pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(btnOpenFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnInsertNewFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnUpdateFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnDeleteFile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnMoveUp, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnMoveDown, javax.swing.GroupLayout.DEFAULT_SIZE, 115, Short.MAX_VALUE))
                 .addContainerGap())
+            .addGroup(pnManageFilesLayout.createSequentialGroup()
+                .addGap(112, 112, 112)
+                .addComponent(btnMergeFile, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(92, 92, 92)
+                .addComponent(btnConvertDocxToPDF)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         pnManageFilesLayout.setVerticalGroup(
             pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnManageFilesLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .addGroup(pnManageFilesLayout.createSequentialGroup()
                         .addComponent(btnOpenFile)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 25, Short.MAX_VALUE)
+                        .addGap(18, 18, 18)
                         .addComponent(btnInsertNewFile)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnUpdateFile)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnDeleteFile)
-                        .addGap(36, 36, 36)
-                        .addComponent(btnMergeFile)
                         .addGap(18, 18, 18)
-                        .addComponent(btnConvertDocxToPDF)
-                        .addGap(35, 35, 35)))
+                        .addComponent(btnMoveUp)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnMoveDown)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(pnManageFilesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnConvertDocxToPDF)
+                    .addComponent(btnMergeFile))
                 .addContainerGap())
         );
 
@@ -467,8 +536,8 @@ public class FormMain extends javax.swing.JFrame {
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
-                .addComponent(jScrollPane3)
-                .addGap(18, 18, 18)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 350, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnExport)
                 .addContainerGap())
         );
@@ -488,14 +557,14 @@ public class FormMain extends javax.swing.JFrame {
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(pnManageDocument, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(pnManageFiles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(pnManageFiles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
         );
 
@@ -521,7 +590,7 @@ public class FormMain extends javax.swing.JFrame {
 
     private void btnInsertNewFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInsertNewFileActionPerformed
 
-        DialogInsertNewFile dialogInsertNewFile = new DialogInsertNewFile(this, true, lbDocumentID.getText());
+        DialogInsertNewFile dialogInsertNewFile = new DialogInsertNewFile(this, true, txtDocumentList.getSelectedValue().toString());
         dialogInsertNewFile.setVisible(true);
         String id = getDocumentIDbyName(txtDocumentList.getSelectedValue().toString());
         updateDataTable(id);
@@ -530,9 +599,9 @@ public class FormMain extends javax.swing.JFrame {
 
     private void txtDocumentListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_txtDocumentListValueChanged
         if (txtDocumentList.getSelectedIndex() > -1) {
-            String id = getDocumentIDbyName(txtDocumentList.getSelectedValue().toString());
-            updateDataTable(id);
-            lbDocumentID.setText(id);
+            documentID = Integer.parseInt(getDocumentIDbyName(txtDocumentList.getSelectedValue().toString()));
+            updateDataTable(String.valueOf(documentID));
+            lbDocumentID.setText(txtDocumentList.getSelectedValue().toString());
             btnEditDocument.setEnabled(true);
             btnDeleteDocument.setEnabled(true);
         }
@@ -571,7 +640,6 @@ public class FormMain extends javax.swing.JFrame {
                     preparedStatement = ConSQL.CON.prepareStatement("INSERT INTO Document VALUES(?)");
                     preparedStatement.setString(1, temp);
                     if (preparedStatement.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(null, "Thêm mới văn bản thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                         loadListDocument();
                     } else {
                         JOptionPane.showMessageDialog(null, "Thêm mới văn bản không thành công", "Thông báo", JOptionPane.ERROR_MESSAGE);
@@ -594,19 +662,23 @@ public class FormMain extends javax.swing.JFrame {
         return count;
     }
     private void tableFileDetailMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tableFileDetailMouseClicked
+        boolean check = Boolean.valueOf(tableFileDetail.getValueAt(tableFileDetail.getSelectedRow(), 0).toString());
+        tableFileDetail.setValueAt(!check, tableFileDetail.getSelectedRow(), 0);
         int a = _getRowSelectedCount(tableFileDetail);
-        if (a > 0) {
+        if (a>0) {
             btnOpenFile.setEnabled(true);
             btnConvertDocxToPDF.setEnabled(true);
             btnUpdateFile.setEnabled(true);
             btnDeleteFile.setEnabled(true);
-        }
-        else
-        {
+            btnMoveUp.setEnabled(true);
+            btnMoveDown.setEnabled(true);
+        } else {
             btnOpenFile.setEnabled(false);
             btnConvertDocxToPDF.setEnabled(false);
             btnUpdateFile.setEnabled(false);
             btnDeleteFile.setEnabled(false);
+            btnMoveUp.setEnabled(false);
+            btnMoveDown.setEnabled(false);
         }
         //System.out.println(tableFileDetail.getValueAt(0, 0));
         if (a > 1) {
@@ -614,6 +686,7 @@ public class FormMain extends javax.swing.JFrame {
         } else {
             btnMergeFile.setEnabled(false);
         }
+
     }//GEN-LAST:event_tableFileDetailMouseClicked
 
     private void btnUpdateFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUpdateFileActionPerformed
@@ -646,27 +719,27 @@ public class FormMain extends javax.swing.JFrame {
     }//GEN-LAST:event_btnUpdateFileActionPerformed
 
     private void btnDeleteFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeleteFileActionPerformed
-        // TODO add your handling code here:
-        boolean check = true;
-        ArrayList<String> list = getPathChooseFromTable(tableFileDetail);
-        int DocumentID = Integer.parseInt(lbDocumentID.getText());
-        for (int i = 0; i < list.size(); i++) {
-            try {
-                String url = list.get(i);
-                String sql = "DELETE DocumentFile WHERE DocumentID =? and URL =?";
-                PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
-                ps.setInt(1, DocumentID);
-                ps.setString(2, url);
-                ps.executeUpdate();
-            } catch (SQLException ex) {
-                check = false;
-                JOptionPane.showMessageDialog(null, "Lỗi xóa file");
-                Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+        if (JOptionPane.showConfirmDialog(rootPane, "Bạn thực sự muốn xóa file này?", "Xác nhận", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION) {
+            boolean check = true;
+            ArrayList<String> list = getPathChooseFromTable(tableFileDetail);
+           
+            for (int i = 0; i < list.size(); i++) {
+                try {
+                    String url = list.get(i);
+                    String sql = "DELETE DocumentFile WHERE DocumentID =? and URL =?";
+                    PreparedStatement ps = ConSQL.CON.prepareStatement(sql);
+                    ps.setInt(1, documentID);
+                    ps.setString(2, url);
+                    ps.executeUpdate();
+                } catch (SQLException ex) {
+                    check = false;
+                    JOptionPane.showMessageDialog(null, "Lỗi xóa file");
+                    Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        }
-        if (check) {
-            JOptionPane.showMessageDialog(null, "Xóa thành công");
-            updateDataTable(lbDocumentID.getText());
+            if (check) {
+                updateDataTable(String.valueOf(documentID));
+            }
         }
     }//GEN-LAST:event_btnDeleteFileActionPerformed
 
@@ -689,7 +762,6 @@ public class FormMain extends javax.swing.JFrame {
                     preparedStatement.setString(1, temp);
                     preparedStatement.setString(2, lbDocumentID.getText());
                     if (preparedStatement.executeUpdate() > 0) {
-                        JOptionPane.showMessageDialog(null, "Sửa tên văn bản thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                         loadListDocument();
                     } else {
                         JOptionPane.showMessageDialog(null, "Xảy ra lỗi khi sửa", "Thông báo", JOptionPane.ERROR_MESSAGE);
@@ -707,7 +779,6 @@ public class FormMain extends javax.swing.JFrame {
                 PreparedStatement pstm = ConSQL.CON.prepareStatement("DELETE Document WHERE ID=?");
                 pstm.setString(1, lbDocumentID.getText());
                 if (pstm.executeUpdate() > 0) {
-                    JOptionPane.showMessageDialog(null, "Xóa thành công", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
                     loadListDocument();
                     updateDataTable(null);
                 } else {
@@ -740,6 +811,11 @@ public class FormMain extends javax.swing.JFrame {
             Logger.getLogger(FormMain.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnMergeFileActionPerformed
+
+    private void formWindowStateChanged(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowStateChanged
+        setTableOption(tableFileDetail);
+        System.out.println(tableFileDetail.size().width);
+    }//GEN-LAST:event_formWindowStateChanged
 
     /**
      * @param args the command line arguments
@@ -795,6 +871,8 @@ public class FormMain extends javax.swing.JFrame {
     private javax.swing.JButton btnInsertDocument;
     private javax.swing.JButton btnInsertNewFile;
     private javax.swing.JButton btnMergeFile;
+    private javax.swing.JButton btnMoveDown;
+    private javax.swing.JButton btnMoveUp;
     private javax.swing.JButton btnOpenFile;
     private javax.swing.JButton btnUpdateFile;
     private javax.swing.JButton jButton4;

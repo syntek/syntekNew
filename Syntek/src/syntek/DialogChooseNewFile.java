@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.docx4j.convert.out.flatOpcXml.FlatOpcXmlCreator;
@@ -20,6 +21,7 @@ import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.xmlPackage.XmlData;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import sun.swing.FilePane;
 
 /**
  *
@@ -34,21 +36,23 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
     public static int PAGE_COUNT;
     public static String DESCRIPTION = ".docx";
     public static String EXTENSIONS = "docx";
-    private String DocumentID = null;
-
-    public String getDocumentID() {
-        return this.DocumentID;
-    }
-
-    public void setDocumentID(String documentID) {
-        this.DocumentID = documentID;
-    }
+    private String documentName = null;
+    private int documentID = -1;
 
     public DialogChooseNewFile(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
         FileNameExtensionFilter extensionFilter = new FileNameExtensionFilter(DESCRIPTION, EXTENSIONS);
         fileChoose.setFileFilter(extensionFilter);
+        setLocation(200, 200);
+    }
+
+    public String getDocumentID() {
+        return this.documentName;
+    }
+
+    public void setDocumentID(String DocumentName) {
+        this.documentName = DocumentName;
     }
 
     public int getPagesNumber(String pathFile) {
@@ -84,7 +88,7 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
         return pageNumber;
     }
 
-    public void getPathFiles() {
+    public void getFilePaths() {
         File file = fileChoose.getSelectedFile();
         PATH_FILE = file.getPath();
         PAGE_COUNT = getPagesNumber(PATH_FILE);
@@ -101,6 +105,7 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         getContentPane().setLayout(new java.awt.CardLayout());
 
+        fileChoose.setCurrentDirectory(null);
         fileChoose.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 fileChooseActionPerformed(evt);
@@ -126,32 +131,41 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
     }// </editor-fold>//GEN-END:initComponents
 
     private void fileChooseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileChooseActionPerformed
-        try {
-            // TODO add your handling code here:
-            // getPagesNumber(PATH_FILE);
-            boolean check = false;
-
+        if (evt.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)) {
             File file = fileChoose.getSelectedFile();
+            System.out.println(fileChoose.getTypeDescription(file));
             PATH_FILE = file.getPath();
-            String sql = "SELECT id FROM DocumentFile WHERE URL = ? and DocumentID = ?";
-            PreparedStatement ps = ConSQL.CON.prepareCall(sql);
-            ps.setString(1, PATH_FILE);
-            ps.setInt(2, Integer.parseInt(DocumentID));
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                check = true;
-                JOptionPane.showMessageDialog(null, "Văn bản đã tồn tại");
-                break;
-            }
-            if (!check) {
-                getPathFiles();
-                getPagesNumber(PATH_FILE);
-                System.out.println(PATH_FILE);
+            System.out.println(file.getName());
+            try {
+                boolean check = false;
 
-                setVisible(false);
+                String sql = "SELECT id FROM DocumentFile WHERE URL = ? and DocumentID = ?";
+                PreparedStatement ps = ConSQL.CON.prepareCall(sql);
+                ps.setString(1, PATH_FILE);
+                ps.setInt(2, FormMain.documentID);
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    check = true;
+                    JOptionPane.showMessageDialog(null, "File văn bản đã tồn tại");
+                    break;
+                }
+                String fileName = file.getName();
+                if (!fileName.substring(fileName.lastIndexOf(".")).equals(".docx")) {
+                    check = true;
+                    JOptionPane.showMessageDialog(rootPane, "Chỉ chọn được file có phần mở rộng .docx","Thông báo",JOptionPane.ERROR_MESSAGE);
+                }
+                if (!check) {
+                    getFilePaths();
+                    //getPagesNumber(PATH_FILE);
+                    System.out.println(PATH_FILE);
+
+                    setVisible(false);
+                }
+            } catch (SQLException ex) {
+                Logger.getLogger(DialogChooseNewFile.class.getName()).log(Level.SEVERE, null, ex);
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(DialogChooseNewFile.class.getName()).log(Level.SEVERE, null, ex);
+        } else {
+            this.dispose();
         }
     }//GEN-LAST:event_fileChooseActionPerformed
 
