@@ -32,6 +32,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
@@ -46,7 +47,7 @@ import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.xmlPackage.XmlData;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import syntek.waitingForm.myThread;
+import syntek.waitingForm.WaitingDialog;
 
 /**
  *
@@ -58,7 +59,7 @@ public class FormMain extends javax.swing.JFrame {
      * Creates new form formMain
      */
     public static int documentID = -1;
-    public static myThread thread = new myThread();
+    public static WaitingDialog waitingDialog = null;
     public FormMain() {
         initComponents();
         myInit();
@@ -116,6 +117,7 @@ public class FormMain extends javax.swing.JFrame {
         
         TableCellRenderer r = new HeaderRenderer(table.getTableHeader(), 0);
         table.getColumnModel().getColumn(0).setHeaderRenderer(r);
+        table.getModel().addTableModelListener(new HeaderCheckBoxHandler(table));
     }
     
     public static DefaultTableModel getDataFromTable(String tableName, Vector tableTitle) {
@@ -695,13 +697,13 @@ public class FormMain extends javax.swing.JFrame {
         tableFileDetail.setValueAt(!check, tableFileDetail.getSelectedRow(), 0);
         int a = _getRowSelectedCount(tableFileDetail);
         if (a == 0) {
-            tableFileDetail.getColumnModel().getColumn(0).setHeaderValue(Boolean.FALSE);
-            tableFileDetail.getTableHeader().repaint();
+//            tableFileDetail.getColumnModel().getColumn(0).setHeaderValue(Boolean.FALSE);
+//            tableFileDetail.getTableHeader().repaint();
         } else if (a > 0) {
-            if (a == tableFileDetail.getRowCount()) {
-                tableFileDetail.getColumnModel().getColumn(0).setHeaderValue(Boolean.TRUE);
-                tableFileDetail.getTableHeader().repaint();
-            }
+//            if (a == tableFileDetail.getRowCount()) {
+//                tableFileDetail.getColumnModel().getColumn(0).setHeaderValue(Boolean.TRUE);
+//                tableFileDetail.getTableHeader().repaint();
+//            }
             btnOpenFile.setEnabled(true);
             btnConvertDocxToPDF.setEnabled(true);
             btnUpdateFile.setEnabled(true);

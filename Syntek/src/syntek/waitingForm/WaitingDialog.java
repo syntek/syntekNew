@@ -4,6 +4,11 @@
  */
 package syntek.waitingForm;
 
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Toolkit;
+import syntek.DialogChooseNewFile;
+
 /**
  *
  * @author MrOnly
@@ -13,14 +18,46 @@ public class WaitingDialog extends javax.swing.JDialog {
     /**
      * Creates new form WaitingDialog
      */
+    public WaitingDialog(Component comm) {
+        initComponents();
+        setCenterPosition();
+    }
+
+    private void setCenterPosition() {
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
+    }
+
+//     if (evt.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)) {
+//            SwingUtilities.invokeLater(new Runnable() {
+//                public void run() {
+//                    FormMain.waitingDialog = new WaitingDialog(null, false);
+//                    FormMain.waitingDialog.setVisible(true);
+//                    Thread performer = new Thread(new Runnable() {
+//                        public void run() {
+//                            System.out.println("thread running");
+//                            countPageNumberOfFile();
+//                            FormMain.waitingDialog.setVisible(false);
+//                        }
+//                    });
+//                    performer.start();
+//                }
+//            });
+//
+//
+//        } else {
+//            this.dispose();
+//        }
     public WaitingDialog(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
+        setCenterPosition();
     }
-    public void setMsg(String msg)
-    {
-     txtMsg.setText(msg);
+
+    public void setMsg(String msg) {
+        txtMsg.setText(msg);
     }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -34,9 +71,10 @@ public class WaitingDialog extends javax.swing.JDialog {
         txtMsg1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setAlwaysOnTop(true);
 
         txtMsg.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        txtMsg.setText("Waiting");
+        txtMsg.setText("Xin chờ");
 
         txtMsg1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         txtMsg1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/syntek/waitingForm/46.gif"))); // NOI18N

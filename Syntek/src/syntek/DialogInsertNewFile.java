@@ -153,7 +153,7 @@ public class DialogInsertNewFile extends javax.swing.JDialog {
         /*
          * get new File index
          */
-        FormMain.thread.run();
+        
         int fileIndex = 1;
         try {
             PreparedStatement pstm = ConSQL.CON.prepareStatement("SELECT MAX(FileIndex)as newIndex FROM DocumentFile WHERE DocumentID = ?");
@@ -184,11 +184,10 @@ public class DialogInsertNewFile extends javax.swing.JDialog {
 
             int e = ps.executeUpdate();
             if (e > 0) {
-                FormMain.thread.StopThread();
+               
                 this.dispose();
             }
         } catch (SQLException ex) {
-            FormMain.thread.StopThread();
             Logger.getLogger(DialogInsertNewFile.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_btnInsertFileActionPerformed

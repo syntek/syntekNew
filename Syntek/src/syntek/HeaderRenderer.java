@@ -33,7 +33,7 @@ public class HeaderRenderer extends JCheckBox implements TableCellRenderer {
         super((String) null);
         setOpaque(false);
         setFont(header.getFont());
-        
+
         header.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -69,10 +69,6 @@ public class HeaderRenderer extends JCheckBox implements TableCellRenderer {
                     setSelected(false);
                     setEnabled(true);
                     break;
-                case INDETERMINATE:
-                    setSelected(true);
-                    setEnabled(false);
-                    break;
             }
         } else {
             setSelected(false);
@@ -107,11 +103,12 @@ class HeaderCheckBoxHandler implements TableModelListener {
             int mci = 0;
             int vci = table.convertColumnIndexToView(mci);
             TableColumn column = table.getColumnModel().getColumn(vci);
-            
+
             Object title = column.getHeaderValue();
-            if (!Status.INDETERMINATE.equals(title)) {
-                column.setHeaderValue(Status.INDETERMINATE);
-            } else {
+//            if (!Status.INDETERMINATE.equals(title)) {
+//                column.setHeaderValue(Status.DESELECTED);
+//            }
+            {
                 int selected = 0, deselected = 0;
                 TableModel m = table.getModel();
                 for (int i = 0; i < m.getRowCount(); i++) {

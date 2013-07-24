@@ -14,6 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.docx4j.convert.out.flatOpcXml.FlatOpcXmlCreator;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
@@ -23,6 +24,7 @@ import org.docx4j.xmlPackage.XmlData;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import sun.swing.FilePane;
+import syntek.waitingForm.WaitingDialog;
 
 /**
  *
@@ -131,48 +133,64 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void fileChooseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileChooseActionPerformed
+    public void countPageNumberOfFile() {
+        //FormMain.thread.setMyMsg("Đang đếm số trang");
+        File file = fileChoose.getSelectedFile();
+        System.out.println(fileChoose.getTypeDescription(file));
+        PATH_FILE = file.getPath();
+        System.out.println(file.getName());
+        try {
+            boolean check = false;
 
-        if (evt.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)) {
-            FormMain.thread.setMyMsg("Đang đếm số trang");
-            FormMain.thread.start();
-            System.out.println("llalaalalllalalalalaal");
-            File file = fileChoose.getSelectedFile();
-            System.out.println(fileChoose.getTypeDescription(file));
-            PATH_FILE = file.getPath();
-            System.out.println(file.getName());
-            try {
-                boolean check = false;
-
-                String sql = "SELECT id FROM DocumentFile WHERE URL = ? and DocumentID = ?";
-                PreparedStatement ps = ConSQL.CON.prepareCall(sql);
-                ps.setString(1, PATH_FILE);
-                ps.setInt(2, FormMain.documentID);
-                ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    check = true;
-                    JOptionPane.showMessageDialog(null, "File văn bản đã tồn tại");
-                    break;
-                }
-                String fileName = file.getName();
-                if (!fileName.substring(fileName.lastIndexOf(".")).equals(".docx")) {
-                    check = true;
-                    JOptionPane.showMessageDialog(rootPane, "Chỉ chọn được file có phần mở rộng .docx", "Thông báo", JOptionPane.ERROR_MESSAGE);
-                }
-                if (!check) {
-                    getFilePaths();
-                    //getPagesNumber(PATH_FILE);
-                    System.out.println(PATH_FILE);
-                    setVisible(false);
-                    FormMain.thread.stop();
-                }
-            } catch (SQLException ex) {
-                FormMain.thread.stop();
-                Logger.getLogger(DialogChooseNewFile.class.getName()).log(Level.SEVERE, null, ex);
+            String sql = "SELECT id FROM DocumentFile WHERE URL = ? and DocumentID = ?";
+            PreparedStatement ps = ConSQL.CON.prepareCall(sql);
+            ps.setString(1, PATH_FILE);
+            ps.setInt(2, FormMain.documentID);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                check = true;
+                JOptionPane.showMessageDialog(null, "File văn bản đã tồn tại");
+                break;
             }
+            String fileName = file.getName();
+            if (!fileName.substring(fileName.lastIndexOf(".")).equals(".docx")) {
+                check = true;
+                JOptionPane.showMessageDialog(rootPane, "Chỉ chọn được file có phần mở rộng .docx", "Thông báo", JOptionPane.ERROR_MESSAGE);
+            }
+            if (!check) {
+                getFilePaths();
+                //getPagesNumber(PATH_FILE);
+                System.out.println(PATH_FILE);
+                setVisible(false);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(DialogChooseNewFile.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
+    }
+    private void fileChooseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileChooseActionPerformed
+        if (evt.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)) {
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    FormMain.waitingDialog = new WaitingDialog(null, false);
+                    FormMain.waitingDialog.setVisible(true);
+                    Thread performer = new Thread(new Runnable() {
+                        public void run() {
+                            System.out.println("thread running");
+                            countPageNumberOfFile();
+                            FormMain.waitingDialog.setVisible(false);
+                        }
+                    });
+                    performer.start();
+                }
+            });
+
+
         } else {
             this.dispose();
         }
+
+
     }//GEN-LAST:event_fileChooseActionPerformed
 
     /**
