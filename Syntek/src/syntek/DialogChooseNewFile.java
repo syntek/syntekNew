@@ -4,6 +4,7 @@
  */
 package syntek;
 
+import java.awt.Frame;
 import java.io.File;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -131,9 +132,11 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
     }// </editor-fold>//GEN-END:initComponents
 
     private void fileChooseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_fileChooseActionPerformed
-       
+
         if (evt.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)) {
-             FormMain.thread.run();
+            FormMain.thread.setMyMsg("Đang đếm số trang");
+            FormMain.thread.start();
+            System.out.println("llalaalalllalalalalaal");
             File file = fileChoose.getSelectedFile();
             System.out.println(fileChoose.getTypeDescription(file));
             PATH_FILE = file.getPath();
@@ -161,10 +164,10 @@ public class DialogChooseNewFile extends javax.swing.JDialog {
                     //getPagesNumber(PATH_FILE);
                     System.out.println(PATH_FILE);
                     setVisible(false);
-                    FormMain.thread.StopThread();
+                    FormMain.thread.stop();
                 }
             } catch (SQLException ex) {
-                FormMain.thread.StopThread();
+                FormMain.thread.stop();
                 Logger.getLogger(DialogChooseNewFile.class.getName()).log(Level.SEVERE, null, ex);
             }
         } else {

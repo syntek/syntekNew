@@ -694,7 +694,6 @@ public class FormMain extends javax.swing.JFrame {
         boolean check = Boolean.valueOf(tableFileDetail.getValueAt(tableFileDetail.getSelectedRow(), 0).toString());
         tableFileDetail.setValueAt(!check, tableFileDetail.getSelectedRow(), 0);
         int a = _getRowSelectedCount(tableFileDetail);
-        System.out.println(a);
         if (a == 0) {
             tableFileDetail.getColumnModel().getColumn(0).setHeaderValue(Boolean.FALSE);
             tableFileDetail.getTableHeader().repaint();
